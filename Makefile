@@ -2,11 +2,18 @@ include makefile.common
 LIBDIR = -L./stm32f4_driver/stm32f4_lib/obj
 all:main.bin
 
-main.elf:main.o startup_stm32f40xx.o
+main.elf:main.o startup_stm32f40xx.o driver
 	$(LD) $(LDFLAGS) main.o startup_stm32f40xx.o ./*/obj/*.o $(LIBDIR)  -lst -lm -lc -lgcc -o $@
 
 main.bin:main.elf
 	$(OBJCP) -Obinary $^ $@
+
+driver:
+	cd stm32f4_driver&&make&&cd ..
+clean_driver:
+	@cd stm32f4_driver&&make clean&&cd ..
+clean_stlib:
+	@cd stm32f4_driver&&make clean_st&&cd ..
 
 INCDIR := ./stm32f4_driver
 INCDIR += ./stm32f4_driver/stm32f4_lib/STM32F4xx_StdPeriph_Driver/inc
@@ -28,7 +35,10 @@ startup_stm32f40xx.o:startup_stm32f40xx.s
 upload:main.bin
 	st-flash --reset write main.bin 0x8000000
 
-.PHONY:all
+.PHONY:all driver clean_driver clean_stlib clean_all
 
 clean:
-	-rm *.elf *.o
+	@-rm *.elf *.o *.bin
+	@echo "clean app's files"
+clean_all:clean clean_driver  clean_stlib
+	@echo "clean all middle files in the hole subject"
