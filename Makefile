@@ -1,44 +1,68 @@
-include makefile.common
+# built-in rules variable ------------------------------------------------------------
+CC = arm-none-eabi-gcc
+AR = arm-none-eabi-ar
+AS = arm-none-eabi-as
+LD = arm-none-eabi-ld
+OBJCP = arm-none-eabi-objcopy
+CFLAGS = -g -mtune=cortex-m4 -mthumb -std=c99 -fdata-sections -mfloat-abi=soft \
+ -march=armv7-m -mthumb-interwork -mapcs-frame
+CPPFLAGS = -DUSE_STDPERIPH_DRIVER -DSTM32F40XX -DSTM32F407xx
+TARGET_ARCH = 
+ASFLAGS = -c -g -mcpu=cortex-m4 -mthumb-interwork -mthumb -mfloat-abi=soft
+ARFLAGS = rcs
+export CFLAGS CPPFLAGS
+CPPFLAGS += $(INCLUDEDIR)
 LIBDIR = -L./stm32f4_driver/stm32f4_lib/obj
+LIBDIR += -L./stm32f4_driver/obj
+LDSCRIPT = $(shell ls *.ld)
+LDFLAGS = -T $(LDSCRIPT)
+LDFLAGS += -L /home/bear/gcc-arm-none-eabi-5_4-2016q2/arm-none-eabi/lib/thumb/
+LDFLAGS += -L /home/bear/gcc-arm-none-eabi-5_4-2016q2/lib/gcc/arm-none-eabi/5.4.1/armv7-m
+# ------------------------------------------------------------------------------------
+
+vpath %.a ./stm32f4_driver/stm32f4_lib/obj
+vpath %.a ./stm32f4_driver/obj
+
+
+INCDIR = $(shell find -name *stm32f4*.h)
+INCDIR += $(shell find -name core*.h)
+INCDIR :=$(dir $(INCDIR))
+INCDIR :=$(sort $(INCDIR))
+INCDIR += ./stm32f4_driver
+
+INCLUDEDIR = $(addprefix -I,$(INCDIR))
+
 all:main.bin
 
-main.elf:main.o startup_stm32f40xx.o driver
-	$(LD) $(LDFLAGS) main.o startup_stm32f40xx.o ./*/obj/*.o $(LIBDIR)  -lst -lm -lc -lgcc -o $@
+include main.d
 
 main.bin:main.elf
 	$(OBJCP) -Obinary $^ $@
 
-driver:
+main.elf:main.o startup_stm32f40xx.o libdriver.a $(LDSCRIPT)
+	$(LD) $(LDFLAGS) main.o startup_stm32f40xx.o $(LIBDIR) -ldriver -lst -lm -lc -lgcc -o $@
+
+libdriver.a:$(shell ls stm32f4_driver/obj/*.o)
 	cd stm32f4_driver&&make&&cd ..
 clean_driver:
 	@cd stm32f4_driver&&make clean&&cd ..
-clean_stlib:
-	@cd stm32f4_driver&&make clean_st&&cd ..
-
-INCDIR := ./stm32f4_driver
-INCDIR += ./stm32f4_driver/stm32f4_lib/STM32F4xx_StdPeriph_Driver/inc
-INCDIR += ./stm32f4_driver/stm32f4_lib/CMSIS/Device/ST/STM32F4xx/Include
-INCDIR += ./stm32f4_driver/stm32f4_lib/CMSIS/Include
-# vpath %.h ./stlib/inc
-# vpath %.c ./stlib/src
-INCLUDEDIR = $(addprefix -I,$(INCDIR))
-vpath %.a ./stm32f4_driver/stm32f4_lib/obj
-
-# vpath %.o ./stm32f4_driver/stm32f4_lib/obj
+clean_driver_all:
+	@cd stm32f4_driver&&make clean_all&&cd ..
 
 main.o:main.c
-	$(CC)  $(STFLAGS) $< -o ./$@
 
 startup_stm32f40xx.o:startup_stm32f40xx.s
-	$(AS) $(ASFLAGS) $< -o ./$@
+
+%.d:%.c 
+	$(CC) -M $(CPPFLAGS) $< >> $@
 
 upload:main.bin
 	st-flash --reset write main.bin 0x8000000
 
-.PHONY:all driver clean_driver clean_stlib clean_all
+.PHONY:all driver clean_driver clean_all
 
 clean:
-	@-rm *.elf *.o *.bin
+	@-rm *.elf *.bin *.o *.d
 	@echo "clean app's files"
-clean_all:clean clean_driver  clean_stlib
+clean_all:clean clean_driver_all
 	@echo "clean all middle files in the hole subject"
