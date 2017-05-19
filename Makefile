@@ -6,12 +6,11 @@ LD = arm-none-eabi-ld
 OBJCP = arm-none-eabi-objcopy
 CFLAGS = -g -mtune=cortex-m4 -mthumb -std=c99 -fdata-sections -mfloat-abi=soft \
  -march=armv7-m -mthumb-interwork -mapcs-frame
-CPPFLAGS = -DUSE_STDPERIPH_DRIVER -DSTM32F40XX -DSTM32F407xx
+CPPFLAGS := -DUSE_STDPERIPH_DRIVER -DSTM32F40XX -DSTM32F407xx
 TARGET_ARCH = 
 ASFLAGS = -c -g -mcpu=cortex-m4 -mthumb-interwork -mthumb -mfloat-abi=soft
 ARFLAGS = rcs
 export CFLAGS CPPFLAGS
-CPPFLAGS += $(INCLUDEDIR)
 LIBDIR = -L./stm32f4_driver/stm32f4_lib/obj
 LIBDIR += -L./stm32f4_driver/obj
 LDSCRIPT = $(shell ls *.ld)
@@ -30,24 +29,25 @@ INCDIR :=$(dir $(INCDIR))
 INCDIR :=$(sort $(INCDIR))
 INCDIR += ./stm32f4_driver
 
-INCLUDEDIR = $(addprefix -I,$(INCDIR))
+CPPFLAGS += $(addprefix -I,$(INCDIR))
 
-all:main.bin
+all:main.bin 
 
 include main.d
 
 main.bin:main.elf
 	$(OBJCP) -Obinary $^ $@
 
-main.elf:main.o startup_stm32f40xx.o libdriver.a $(LDSCRIPT)
+main.elf:main.o startup_stm32f40xx.o driver $(LDSCRIPT)
 	$(LD) $(LDFLAGS) main.o startup_stm32f40xx.o $(LIBDIR) -ldriver -lst -lm -lc -lgcc -o $@
 
-libdriver.a:$(shell ls stm32f4_driver/obj/*.o)
+
+driver:
 	cd stm32f4_driver&&make&&cd ..
 clean_driver:
 	@cd stm32f4_driver&&make clean&&cd ..
-clean_driver_all:
-	@cd stm32f4_driver&&make clean_all&&cd ..
+# clean_driver_all:
+# 	@cd stm32f4_driver&&make clean_all&&cd ..
 
 main.o:main.c
 
@@ -59,10 +59,11 @@ startup_stm32f40xx.o:startup_stm32f40xx.s
 upload:main.bin
 	st-flash --reset write main.bin 0x8000000
 
-.PHONY:all driver clean_driver clean_all
+.PHONY:all driver clean_driver distclean clean
 
-clean:
+clean:clean_driver
 	@-rm *.elf *.bin *.o *.d
 	@echo "clean app's files"
-clean_all:clean clean_driver_all
+distclean:clean
+	@cd stm32f4_driver&&make distclean&&cd ..
 	@echo "clean all middle files in the hole subject"

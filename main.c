@@ -1,7 +1,7 @@
 #include <USART/USART.h>
 #include <LED/LED.h>
 #include <MPU6050/MPU6050.h>
-
+#include <AK8975/AK8975.h>
 void Delay()
 {
 	int i,j;
@@ -14,7 +14,7 @@ void Delay()
 	}
 	return;
 }
-
+ 
 int main()
 {
 	uint8_t data;
@@ -23,11 +23,15 @@ int main()
 	I2C1_Init();
 	Delay();
 	
-	USART1_Send(0x08);
-	data=MPU6050Init();
+	USART1_Send(0xcc);
+	data = MPU6050Init();
+	USART1_Send(data);
+	Delay();
+	data = AK8975Init();
 	USART1_Send(data);
 	while(1)
 	{
+		// AK8975Enable();
 		LED_GREEN_ON();
 		Delay();
 		LED_GREEN_OFF();
@@ -36,7 +40,8 @@ int main()
 		MPU6050GetAcc(&acc);
 		// USART1_Send(0xf0);
 		// USART1_Send(gyro.x_data>>8);
-		// USART1_Send(gyro.x_data&0x08);
+		GetMag(&mag);
+		USART1_Send(mag.x_data&0xff);
 		// USART1_Send(0x0f);
 		// data = MPU6050Read(MPU_ADDR,0x3b);
 		// USART1_Send(data);
