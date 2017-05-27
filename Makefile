@@ -23,11 +23,9 @@ vpath %.a ./stm32f4_driver/stm32f4_lib/obj
 vpath %.a ./stm32f4_driver/obj
 
 
-INCDIR = $(shell find -name *stm32f4*.h)
-INCDIR += $(shell find -name core*.h)
+INCDIR = $(shell find | grep '\>.h')
 INCDIR :=$(dir $(INCDIR))
 INCDIR :=$(sort $(INCDIR))
-INCDIR += ./stm32f4_driver
 
 CPPFLAGS += $(addprefix -I,$(INCDIR))
 
